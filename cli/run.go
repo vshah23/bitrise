@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/bitrise-io/bitrise/analytics"
 	"github.com/bitrise-io/bitrise/bitrise"
 	"github.com/bitrise-io/bitrise/configs"
@@ -185,6 +187,20 @@ func (r WorkflowRunner) runWorkflows(tracker analytics.Tracker) (models.BuildRun
 	}
 
 	environments = append(environments, targetWorkflow.Environments...)
+	for _, env := range environments {
+		_, ok := env["opts"]
+		if !ok {
+			continue
+		}
+	}
+	envBytes, err := yaml.Marshal(envmanModels.EnvsSerializeModel{Envs: environments})
+	if err != nil {
+		return models.BuildRunResultsModel{}, fmt.Errorf("failed to write secret envs to file")
+	}
+	err = os.WriteFile(DefaultSecretsFileName, envBytes, 0400)
+	if err != nil {
+		return models.BuildRunResultsModel{}, fmt.Errorf("failed to write secret envs to file")
+	}
 
 	// Bootstrap Toolkits
 	for _, aToolkit := range toolkits.AllSupportedToolkits() {
